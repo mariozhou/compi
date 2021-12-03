@@ -1,0 +1,2078 @@
+package Main;
+
+import java.util.Hashtable;
+import java_cup.runtime.Symbol;
+import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.awt.Color;
+import java.io.BufferedWriter;
+import java_cup.runtime.*;
+import java.io.FileReader;
+import java.io.InputStreamReader;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.Stack;
+import java.io.IOException;
+import javax.swing.JOptionPane;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
+import java.util.Stack;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.EOFException;
+import java.awt.Color;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Hashtable;
+import java.io.InputStreamReader;
+
+
+parser code
+{:
+    private Symbol s;
+    int idenx; // num de fila
+    ArrayList<String> listavalor1 = new ArrayList<String>();  // guarda tipos
+    ArrayList<String> listapila = new ArrayList<String>();  
+    ArrayList<String> listacond = new ArrayList<String>();   
+    ArrayList<String> mostrarCod = new ArrayList<String>();  // guardar codigo intermedio para mostrar
+    ArrayList<String> listapara = new ArrayList<String>();  // guarda FUNC_PARAMS
+    ArrayList<String> listObject = new ArrayList<String>();  // guarda codigo object
+    ArrayList<String> listaexp = new ArrayList<String>();  
+    ArrayList<Integer> listaTemp = new ArrayList<Integer>(); //para t temporales
+    ArrayList<String> listaTemp2 = new ArrayList<String>(); //para t temporales
+    String codAr=""; 
+    String codArFuncion="";
+    String codArTodo="";
+    Stack<String> pila = new Stack(); // pilasemantica
+    Stack<String> pilac = new Stack(); // pilade codigo intermedio
+    int temporal =0;
+    int label =0;
+    String CondMove ="";
+    String resTemp =""; // resultado temporal
+    String resTempArd ="";// resultado temporal de expresioens pa arduino
+    String resExpAr =""; //imprimir expar
+    String resultado ="";
+    String ciclo ="";
+ //  Hashtable<String, Lexema> tabla = new Hashtable<>();
+    public void syntax_error(Symbol s){
+        this.s = s;
+    }
+
+    public Symbol getS(){
+        return this.s;
+    }
+    
+    public boolean valorTipo(ArrayList<String> list,String op){
+        String x= list.get(list.size()-1);//ultimo elemento agregar en asignacion sera la id
+        String v;
+        
+        switch(Operador(op)){
+        case "arit":
+            for (int i = 0; i < list.size(); i++) {
+              if((list.get(i).equals("Text") || list.get(i).equals("Bool")) ) { 
+                   
+                return false;    
+                }
+            }
+            return vTipo(list);
+       
+        case "logico":
+            for (int i = 0; i < list.size(); i++) {
+              if((list.get(i).equals("Text") || list.get(i).equals("Int")|| list.get(i).equals("Float") ) ) {
+                    
+                return false;    
+                }
+            }
+            return vTipo(list);
+
+        case "comp":
+            for (int i = 0; i < list.size(); i++) {
+              if((list.get(i).equals("Text") || list.get(i).equals("Bool")) ) {
+                   
+                return false;    
+                }
+            }
+            return vTipo(list);
+        case "igual":
+         
+            return vTipo(list);
+        case "":
+            
+                
+            return vTipo(list);
+        default:
+            return vTipo(list);
+        }  
+    }
+
+    public boolean vTipo(ArrayList<String> list){
+        String x = list.get(list.size()-1);//ultimo elemento agregar en asignacion sera la id
+        String v;
+         
+        for (int i = 0; i < list.size(); i++) {     
+            v = list.get(i);
+            if(v.equals(x)){
+            }else{
+ 
+                return false;
+                 }
+            }
+                listavalor1.clear();
+                listavalor1.add(x);
+            return true;
+    }
+    
+    
+    public String Operador(String token) {
+        if( (token.equals("+") || token.equals("-") || token.equals("*")|| token.equals("/")) ){
+            return "arit";    
+        }if( (token.equals(">=") || token.equals("<=")|| token.equals("!=") || token.equals("<")|| token.equals(">") ) ){
+            return "comp";     
+        }if( (token.equals("||") || token.equals("&&")) ){
+            return "logico";     
+        }if(token.equals("==") ){
+            return "igual"; // 
+        }else{ return ""; } 
+    }
+
+    public String operar(String Izq, String op, String Der) {
+        
+        String a = Izq;
+        String b = Der;
+
+        switch (op) {
+            case "+":
+                return a+"+"+b;
+            case "-":
+                return a+"-"+b;
+            case "*":
+                return a+"*"+b;
+            case "/":
+                return a+"/"+b;
+            default:
+                return "false";
+        }
+    }
+/* -------------------------------- codigo intermedio ------------------------------------ */
+   public void pos() { // exp en sufijo a CodIntermedio
+        String Der, Izq,x;
+      
+                   if( (listaTemp.isEmpty()) ){
+                    listaTemp2.add("t1");
+                    listaTemp.add(1);
+                    Main.codArInclude2+="int t1; \n";
+                    System.out.println("asd:"+listaTemp.get(0)+"");          
+                    } 
+                
+
+        if(listapila.size()==2){
+                  
+            //x=x.replace("@", "");
+
+            resTemp +=   "= "+listapila.get(0).replace("@", "")+" "+listapila.get(1).replace("@", "")+"\n\n";
+            //System.out.println(resTemp); // imprimir codigo intermedio
+            //Main.mostrarCod.add(resTemp);
+
+        }else{
+
+        for (String token : listapila) {
+        if(!(token.charAt(0)== '@')){
+            if (cOperador(token)) {
+                Der = pila.pop();
+                if (pila.isEmpty()) {
+                    System.err.println("Error, elemento faltante");
+                }
+                Izq = pila.pop();
+                temporal++;
+                    
+                 
+                   if( (listaTemp.get(listaTemp.size()-1) < (temporal)) ){
+                    System.out.println("T:t"+temporal);
+                   listaTemp.add(temporal);
+                   listaTemp2.add("t"+temporal);
+                   Main.codArInclude2+="int t"+temporal+"; \n";
+                    } 
+                
+                
+                resTemp +=  coperar(Izq, token, Der)+"t"+temporal+"\n";
+                resTempArd += "t"+temporal+" = "+coperarArd(Izq, token, Der)+"\n";
+                pila.push("t"+temporal);
+            } else {
+               pila.push(token);
+            }  
+        }else{   
+            x =token;
+            x=x.replace("@", "");
+            resTemp +=  "= "+"t"+temporal+" "+x+"\n\n";
+            resTempArd += x+" = t"+temporal+"; \n\n";
+            }
+        }
+
+        //System.out.println(resTemp); // imprimir codigo intermedio
+        //Main.mostrarCod.add(resTemp);
+       // Main.insertCodInt(resTemp);
+
+        temporal = 0;
+        
+        }
+    }
+/*---------------------------------------------------------------*/
+ public void cond() {                      //acomodar operaciones relacionales   solo en cilcos
+        String Der, Izq,x,res="";
+              for (String token : listacond) {
+
+                if (cOperador(token)) {
+                Der = pila.pop();
+                if (pila.isEmpty()) {
+                    System.err.println("Error, elemento faltante");
+                }
+                Izq = pila.pop();
+                resultado += coperar(Izq, token, Der);
+                System.out.println("rel "+resultado);
+                Main.insertCodInt(resultado);
+            } else {
+               pila.push(token);
+            }
+             
+         }
+        listacond.clear(); 
+    }
+
+
+    private boolean cOperador(String token) {
+        return token.equals("+") || token.equals("-") || token.equals("*")
+                || token.equals("/") || token.equals(">")|| token.equals("==")|| token.equals("<")
+                || token.equals("<=")|| token.equals(">=")|| token.equals("!=");
+    }
+
+   public String coperar(String Izq, String op, String Der) {
+        String a = Izq;
+        String b = Der;
+
+        switch (op) {
+            case "+":
+                return "suma "+a+" "+b+" ";
+            case "-":
+                return "resta "+a+" "+b+" ";
+            case "*":
+                return "mul "+a+" "+b+" ";
+            case "/":
+                return "div "+a+" "+b+" ";
+            case ">":
+                return a+" <= "+b+" ";
+            case ">=":
+                return a+" < "+b+" ";    
+            case "==":
+                return a+" != "+b+" ";  
+            case "<":
+                return a+" >= "+b+" "; 
+            case "<=":
+                return a+" > "+b+" ";
+            case "!=":
+                return a+" == "+b+" ";
+            default:
+                return "false";
+        }
+    }
+
+    public String coperarArd(String Izq, String op, String Der) {
+        String a = Izq;
+        String b = Der;
+
+        switch (op) {
+            case "+":
+                return a+" + "+b+";";
+            case "-":
+                return a+" - "+b+"; ";
+            case "*":
+                return a+" * "+b+"; ";
+            case "/":
+                return a+" / "+b+"; ";
+            case ">":
+                return a+" <= "+b+"; ";
+            case ">=":
+                return a+" < "+b+"; ";    
+            case "==":
+                return a+" != "+b+"; ";  
+            case "<":
+                return a+" >= "+b+"; "; 
+            case "<=":
+                return a+" > "+b+"; ";
+            case "!=":
+                return a+" == "+b+"; ";
+            default:
+                return "false";
+        }
+    }
+:};
+/*----------------------- if  ---------------------------------*/
+  /*  public void cif(String cond,String exp){
+        //exp(exp)
+        //"If "+cond+" GOTO L2
+            exp
+            L2:
+        "
+    }*/
+
+//-------------------------------- TERMINALES -----------------------------------------------//
+
+terminal
+    PComa, Punto, Coma, Comillas_simples, Home, Initialize, PortA, PortB, PortC, PortD, Enable,
+    GetTemp, Ac, Set, Start, Shutdown, Light, Off, On, LightRGB, LightMode, Color, Door, Open, New, 
+    Close, Lock, Unlock, Window, IsOpen, IsClose, IsLock, IsUnlock, UnlockAt, LockAt, Camera, Temp,
+    Record, StopRec, Move, IsMove, Alarm, Device, IsIn, IsOut, Int, Text, Float, Bool, Receive,
+    Display, For, While, If, Else, When, Default, Asignacion, Igual, Menor, Mayor, Mayor_igual,
+    Menor_igual, Diferente, Suma, Resta, Multiplicacion, Division, And, Or, Inc, Dec, Parentesis_izq,
+    Parentesis_der, Corchete_izq, Corchete_der, Llave_izq, Llave_der, Identificador, Numero_Entero,
+    Numero_Euler, Numero_Euler_Flotante, ERROR, Cadena, ERROR2, AsignacionArrow, SmartCamera, Program, 
+    Numero_Flotante, This, Doorbell, FaceCheck, SaveFace, DeleteFace, True, False, IsOn, Then, Room, ERROR3,
+    RecordTime, IsCamaraOff, Avanzar, Retroceder, Detener, IsSound, Whistle, Capture, CamaraOn, CamaraOff, MicroOn, 
+    MicroOff, IsCamaraOn, IsOff, Micro, Libreria, Import,Dos_puntos
+;
+
+//-------------------------------- NO TERMINALES ----------------------------------------------//
+
+non terminal INICIO, STMT_LIST, STMT, DECL, CIERRE, EXP, ENA_PORT, DEC_OBJETO, OBJETO, DECL_TIPO,
+             ACT_PORT, OBJ_PARAMETROS, EXP_LIST, FUNC, FUNC_TYPE, FUNC_PARAMS, THIS_FUNC, THIS_FUNC_TYPE, IN_OUT,
+             VALUE_IN, VALUE_OUT, IF_STMT, COND, COND_IF, COND_IF_2, IF_FUNC_TYPE, STMT_IF,IMPOR,
+             DECLVA, DECLS, TIPO, FUNC_TYPE_IF, FOR_STMT,While_STMT, COND_FOR_2,EXP_2,VALOR,COND_FOR
+;
+
+//-------------------------------- NO TERMINAL INICIAL ----------------------------------------//
+
+precedence left Suma, Resta;
+precedence left Multiplicacion, Division;
+
+start with INICIO;
+
+//-------------------------------- GRAMATICA --------------------------------------------------//
+
+INICIO ::=
+
+/* Sintaxis Correcta */
+
+    Identificador:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) -> INICIO ::= [ INICIO "+s+".Initialize(Camera{ STMT_LIST ]\n"); 
+    :} Punto Initialize Parentesis_izq Camera Llave_izq STMT_LIST |
+
+/* Método Initialize */
+
+    Identificador error:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) -> INICIO ::= [ "+s+" error { STMT_LIST ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e004 - Sintaxis del Metodo Initialize Erronea -> ");  
+        Main.error = true;  
+    :} STMT_LIST |
+
+/* Error Fuera de Bloque */
+
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) -> INICIO ::= [ INICIO error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Una o más sentencias fuera del bloque principal -> "); 
+        Main.error = true; 
+    :} INICIO |
+    ERROR:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) -> INICIO ::= [ INICIO error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Una o más sentencias fuera del bloque principal -> "); 
+        Main.error = true; 
+    :} INICIO |
+    ERROR2:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) -> INICIO ::= [ INICIO error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Una o más sentencias fuera del bloque principal -> "); 
+        Main.error = true; 
+    :} INICIO |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) -> INICIO ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e003 - No se encontró el Metodo Initialize -> "); 
+        Main.error = true; 
+    :}
+;
+
+/* ------------------------------------ // LISTA DE SENTENCIAS // --------------------------------------------*/
+
+STMT_LIST ::=
+
+    IMPOR:s {:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ IMPOR STMT_LIST ]\n"); 
+    :} STMT_LIST |
+
+    DECLVA:s {:// declaraciones
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ DECLVA STMT_LIST ]\n");    
+
+    :} STMT_LIST |
+  
+  error:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ error STMT_LIST ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e006 - Sentencia inválida -> "); 
+        Main.error = true;   
+    :} STMT_LIST |
+    STMT:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ STMT STMT_LIST ]\n"); 
+    :} STMT_LIST |
+
+    IF_STMT:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ IF_STMT STMT_LIST ]\n"); 
+       
+        
+    :} STMT_LIST |
+
+    FOR_STMT:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ FOR_STMT STMT_LIST ]\n"); 
+    :} STMT_LIST |
+  
+    While_STMT:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [  While_STMT STMT_LIST ]\n"); 
+    :} STMT_LIST |
+
+    CIERRE:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ CIERRE ]\n"); 
+    :}
+;
+
+/* ------------------------------------------- // Importa libreria watchdog// -----------------------------------------------------*/
+
+IMPOR ::=
+    Import Identificador:s  {:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> IMPOR ::= [ Import "+s+" ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="Import "+s+"\n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+    :} PComa |
+   
+    Import Identificador:s Punto Identificador:a {:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> IMPOR ::= [ Import "+s+" Punto "+a+" PComa ]\n"); 
+        /* codigo intermedio */
+    parser.resultado+="Import "+s+"."+a+"\n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+    :} PComa
+;
+
+/* ------------------------------------------- // DECLARAR DE VARIABLE WATCHDOG// -----------------------------------------------------*/
+
+DECLVA ::=
+/*
+    TIPO:a Identificador:s PComa{:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> DECLVA ::= [ TIPO "+s+" ]\n"); 
+    //    Main.listaIdValor.add(s+"");
+    :}   |
+*/
+
+    DECLS:s{:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> DECLVA ::= [ DECLS ]\n"); 
+        
+        :}  |
+
+    Int:b Identificador:s PComa{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLVA ::= [  Int "+s+" ]\n");
+        if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(" ");
+          
+        parser.resultado+="Int "+s+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+        
+        Main.codArInclude2+="int "+s+"; \n"; 
+
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        }  
+        
+    :}  |
+    Text:b Identificador:s PComa{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLVA ::= [  Text "+s+" ]\n");
+         if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(" ");
+          
+        parser.resultado+="Text "+s+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+
+        Main.codArInclude2+="String "+s+"; \n"; 
+        
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        }
+        
+    :}  |
+    Float:b Identificador:s PComa{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLVA ::= [  Float "+s+" ]\n");
+         if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(" ");
+          
+        parser.resultado+="Float "+s+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+
+        Main.codArInclude2+="float "+s+"; \n"; 
+
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        } 
+    :}  |
+    Bool:b Identificador:s PComa{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLVA ::= [  Bool "+s+" ]\n");
+         if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(" ");
+          
+        parser.resultado+="Bool "+s+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+        
+        Main.codArInclude2+="boolean "+s+"; \n"; 
+
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        }
+    :};
+
+/*
+     Int Identificador:s Asignacion Numero_Flotante {:
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e020 - Se espera un Número entero "); 
+        Main.error = true; 
+    :}  PComa |
+        
+     Int Identificador:s Asignacion Numero_Entero {:
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e020 - Se espera un Número entero "); 
+        Main.error = true; 
+
+    :}  PComa
+*/
+
+
+DECLS ::=
+    /*---------------    Int    ----------------------*/
+  Int:b Identificador:s Asignacion Numero_Entero:a  {:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> DECLS ::= [ Int "+s+" = "+a+"; ]\n");  
+        if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(a+"");
+
+        parser.resultado+=b+" "+s+" = "+a+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+
+        Main.codArInclude2+="int "+s+" = "+a+"; \n"; 
+
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        }
+        
+    :}  PComa |
+
+  Int Identificador:s Asignacion error PComa {:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ error "+s+" ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e020 - Tipos incompatibles se espera un Número entero "); 
+        Main.error = true; 
+    :}   |
+
+    /*---------------    Text    ----------------------*/
+  Text:b Identificador:s Asignacion Cadena:a PComa {:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> DECLS ::= [ Text "+s+" = "+a+"; ]\n");  
+        if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(a+"");
+
+        parser.resultado+=b+" "+s+" = "+a+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+
+        Main.codArInclude2+="String "+s+" = "+a+"; \n"; 
+
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        }
+      
+    :}  |
+
+  Text Identificador:s Asignacion error PComa{:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ error "+s+" ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e020 - Tipos incompatibles se espera un Cadena "); 
+        Main.error = true; 
+    :}   |
+
+    /*---------------    Float    ----------------------*/
+  Float:b Identificador:s Asignacion Numero_Flotante:a PComa {:
+         Main.arbolSin.add("( "+(sright+1)+" ) --> DECLS ::= [ Text "+s+" = "+a+"; ]\n");  
+        if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(a+"");
+
+        parser.resultado+=b+" "+s+" = "+a+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+
+        Main.codArInclude2+="float "+s+" = "+a+"; \n"; 
+
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        }
+       
+    :}  |
+
+  Float Identificador:s Asignacion error PComa{:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ error "+s+" ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e020 - Tipos incompatibles se espera un Número real "); 
+        Main.error = true; 
+    :}   |
+
+    /*---------------    Bool    ----------------------*/
+  Bool:b Identificador:s Asignacion True:a PComa {:
+        if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(a+"");
+
+        parser.resultado+=b+" "+s+" = "+a+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+
+        Main.codArInclude2+="boolean "+s+" = true; \n"; 
+
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        }
+  
+    :}  |
+  Bool:b Identificador:s Asignacion False:a PComa {:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> DECLS ::= [ Text "+s+" = "+a+"; ]\n");  
+        if(!Main.buscarid(s+"")){ //buscar id repetido
+          //llenar tablad de simbolo
+          Main.listaIdValor.add(s+"");
+          Main.listaIdTipo.add(b+"");
+          Main.listaIdLinea.add((sright+1));
+          Main.listaValoresId.add(a+"");
+
+          Main.codArInclude2+="boolean "+s+" = false; \n";
+
+        parser.resultado+=b+" "+s+" = "+a+"\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+        }else{
+          Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e018 - Variable "+s+" ya declarada  en: " ); 
+          Main.error = true; 
+        }
+    :}  |
+
+  Bool Identificador:s Asignacion error PComa{:
+        Main.arbolSin.add("( "+(sright+1)+" ) --> STMT_LIST ::= [ error "+s+" ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e020 - Tipos incompatibles se espera un True o False "); 
+        Main.error = true; 
+    :}   
+;
+
+
+
+TIPO ::=
+    Int:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> TIPO ::= [  Int ]\n");
+     //   Main.listaIdValor.add(s+"");
+    :} |
+    Text:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> TIPO ::= [  Text ]\n");
+     //   Main.listaIdValor.add(s+"");
+        
+    :} |
+    Float:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> TIPO ::= [  Float ]\n");
+   //     Main.listaIdValor.add(s+"");
+    :} |
+    Bool:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> TIPO ::= [  Bool ]\n");
+     //   Main.listaIdValor.add(s+"");
+    :} 
+ 
+;
+
+/*
+DECLS ::=
+    Cadena:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLS ::= [   "+s+" ]\n");
+        Main.listaIdValor.add(s+"");
+    :} |
+    Numero_Entero:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLS ::= [   "+s+" ]\n");
+        Main.listaIdValor.add(s+"");
+    :} |
+    Numero_Flotante:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLS ::= [   "+s+" ]\n");
+        Main.listaIdValor.add(s+"");
+    :} |
+    False:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLS ::= [   "+s+" ]\n");
+        Main.listaIdValor.add(s+"");
+    :} |
+    True:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DECLS ::= [   "+s+" ]\n");
+        Main.listaIdValor.add(s+"");
+    :} |
+
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> DECLS ::= [ error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e09 - Se espera un valor -> "); 
+        Main.error = true;  
+    :}
+;
+*/
+
+
+
+/* ------------------------------------------- // CIERRE // -----------------------------------------------------*/
+
+CIERRE ::= 
+    Llave_der Parentesis_der PComa:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> CIERRE ::= [ Llave_der Parentesis_der PComa ]\n"); 
+    :}  |
+    Llave_der Parentesis_der PComa error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> CIERRE ::= [ Llave_der Parentesis_der PComa error ]\n"); 
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Una o más sentencias fuera del bloque principal -> "); 
+        Main.error = true; 
+    :}  |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> CIERRE  ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e006 - Sentencia inválida -> ");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Falta estructura de cierre del Método Initialize -> "); 
+        Main.error = true; 
+    :}  |
+    ERROR:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> CIERRE  ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e006 - Sentencia inválida -> ");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Falta estructura de cierre del Método Initialize -> "); 
+        Main.error = true; 
+    :} |
+    ERROR2:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> CIERRE  ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e006 - Sentencia inválida -> ");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Falta estructura de cierre del Método Initialize -> "); 
+        Main.error = true; 
+    :} |
+    STMT:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> CIERRE ::= [ STMT ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Falta estructura de cierre del Método Initialize -> "); 
+        Main.error = true;  
+    :} |
+    IF_STMT:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> CIERRE ::= [ IF_STMT ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e005 - Falta estructura de cierre del Método Initialize -> "); 
+        Main.error = true;  
+    :}
+;
+
+/* ---------------------------------------- // SENTENCIAS // ------------------------------------------------------*/
+
+STMT ::=
+    DECL:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT ::= [ DECL ]\n");
+        parser.resultado+=parser.resTemp;   // expresiones
+        parser.resTemp="";   
+        
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+
+
+        System.out.println("STMT::"); 
+        //ardui
+        parser.resExpAr+=parser.resTempArd;   // expresiones
+        parser.resTempArd="";   
+        parser.codArFuncion+=parser.resExpAr;
+        parser.resExpAr="";
+        parser.codArTodo+=parser.codArFuncion+" \n"; // funciones de arduino dentro de if
+        parser.codArFuncion="";
+        Main.codarduinoS+=parser.codArTodo;
+        parser.codArTodo="";
+     
+
+
+    :}  |
+    ACT_PORT:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT ::= [ ACT_PORT ]\n"); 
+    :}  |
+    FUNC:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT ::= [ FUNC ]\n"); 
+
+        System.out.println("fncc::"); 
+        //ardui
+        parser.resExpAr+=parser.resTempArd;   // expresiones
+        parser.resTempArd="";   
+        parser.codArFuncion+=parser.resExpAr;
+        parser.resExpAr="";
+        parser.codArTodo+=parser.codArFuncion+" \n"; // funciones de arduino dentro de if
+        parser.codArFuncion="";
+        Main.codarduinoS+=parser.codArTodo;
+        parser.codArTodo="";
+    :}  |
+    IN_OUT:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT ::= [ IN_OUT ]\n"); 
+    :} |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT ::= [ error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e006 - Sentencia inválida -> "); 
+        Main.error = true;  
+    :} PComa |
+    ERROR:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT ::= [ error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e006 - Sentencia inválida -> "); 
+        Main.error = true;  
+    :} error PComa |
+    ERROR3:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT ::= [ error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e006 - Sentencia inválida -> "); 
+        Main.error = true;  
+    :} error PComa
+;
+ 
+/* ------------------------------------------- // If  // ---------------------------------------------------------*/
+
+IF_STMT ::=
+    If:s COND_IF {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> IF_STMT ::= [ If COND_IF ; ]\n");
+        parser.ciclo = "if";
+        //codarduino
+        parser.codArTodo+="if ( "+parser.codAr+" ){ \n";
+   
+        parser.codAr="";
+        parser.resExpAr+=parser.resTempArd;
+        parser.resTempArd="";   
+        parser.codArFuncion+=parser.resExpAr;
+        parser.resExpAr="";
+        parser.codArTodo+=parser.codArFuncion+"} \n"; // funciones de arduino dentro de if
+        parser.codArFuncion="";
+        Main.codarduinoL+=parser.codArTodo;
+        parser.codArTodo="";
+
+        //intermedio
+        System.out.println("IF_SMT::"); 
+        parser.resultado+="if ";
+        parser.resultado+=parser.CondMove;
+        parser.CondMove="";
+        parser.cond();
+        parser.label++;
+        parser.resultado+="GOTO L"+parser.label+"\n";
+        parser.resultado+=parser.resTemp;   //lo que ejecuta si es true
+        parser.resTemp="";
+      
+        parser.resExpAr+=parser.resTempArd;   //lo que ejecuta si es true
+        parser.resTempArd="";
+
+        parser.resultado+="L"+parser.label+":\n\n";
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+        
+    :} 
+
+;
+
+COND_IF ::=
+    Parentesis_izq:s COND Parentesis_der COND_IF_2 {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND_IF ::= [ ( COND ) COND_IF_2 ]\n");
+            Main.ArbolConPilas.add("\t");
+    :} |
+    error:s Parentesis_der COND_IF_2{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND_IF ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e014 - Sintaxis errona de la Sentencia If -> "); 
+        Main.error = true;  
+    :} |
+    Parentesis_izq error:s COND_IF_2{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND_IF ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e014 - Sintaxis errona de la Sentencia If -> "); 
+        Main.error = true;  
+    :} |
+    error:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND_IF ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e014 - Sintaxis errona de la Sentencia If -> "); 
+        Main.error = true;  
+    :}
+;
+
+COND_IF_2 ::=
+    Llave_izq:s STMT_IF {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND_IF_2 ::= [ { IF_FUNC_TYPE }  ]\n");
+    :} |
+    error:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND_IF_2 ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e014 - Sintaxis errona de la Sentencia If -> "); 
+        Main.error = true;  
+    :}
+;
+/*---------------------------------  condicional  -----------------------------------------*/
+COND ::=
+    EXP Igual:a{:Main.ArbolConPilas.add("=");:} EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP == EXP ]\n");
+       
+        parser.listacond.add(a+"");
+       
+         //parser.cond();
+
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();    
+        }else{
+            //Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            //Main.error = true;      
+            parser.listavalor1.clear();
+        }            
+    :} |
+    EXP Diferente:a{:Main.ArbolConPilas.add("!");:} EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP != EXP ]\n");
+        parser.listacond.add(a+"");
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        } 
+    :} |
+   EXP Mayor:a{:Main.ArbolConPilas.add(">");:} EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP > EXP ]\n");
+        parser.listacond.add(a+"");
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            //Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+           //Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+    EXP Mayor_igual:a EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP >= EXP ]\n");
+        parser.listacond.add(a+"");
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            //Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            //Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+     EXP Menor:a{:Main.ArbolConPilas.add("<");:} EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP < EXP ]\n");
+        parser.listacond.add(a+"");
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listavalor1.clear();
+            parser.listapila.clear();
+            
+        }else{
+            //Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            //Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+    EXP Menor_igual:a EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP <= EXP ]\n");
+        parser.listacond.add(a+"");
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+           // Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+           // Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+   EXP And:a{:Main.ArbolConPilas.add("&");:} EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP < EXP ]\n");
+        parser.listacond.add(a+"");
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listavalor1.clear();
+            parser.listapila.clear();
+            
+        }else{
+           // Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+           // Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+    EXP Or:a{:Main.ArbolConPilas.add("|");:} EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP <= EXP ]\n");
+        parser.listacond.add(a+"");
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listavalor1.clear();
+            parser.listapila.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+
+    IF_FUNC_TYPE Igual:a EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP == EXP ]\n");    
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listavalor1.clear();
+            parser.listapila.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+   /* IF_FUNC_TYPE Diferente EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP != EXP ]\n");
+    :} |
+    IF_FUNC_TYPE Mayor EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP > EXP ]\n");
+    :} |
+    IF_FUNC_TYPE Mayor_igual EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP >= EXP ]\n");
+    :} |
+    IF_FUNC_TYPE Menor EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP < EXP ]\n");
+    :} |
+    IF_FUNC_TYPE Menor_igual EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP <= EXP ]\n");
+        
+    :} |
+*/
+    IF_FUNC_TYPE And:a EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP < EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listavalor1.clear();
+            parser.listapila.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+    IF_FUNC_TYPE Or:a EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP <= EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+
+    EXP Igual:a IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP == EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+    EXP Diferente:a IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP != EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+/*
+    EXP Mayor IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP > EXP ]\n");
+    :} |
+    EXP Mayor_igual IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP >= EXP ]\n");
+    :} |
+    EXP Menor IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP < EXP ]\n");
+    :} |
+    EXP Menor_igual IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP <= EXP ]\n");
+    :} |
+*/
+    EXP And:a IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP < EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+    EXP Or:a IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP <= EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }
+    :} |
+
+    IF_FUNC_TYPE Igual:a IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP == EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listapila.clear();
+            parser.listavalor1.clear();
+        }          
+    :} |
+    IF_FUNC_TYPE And:a IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP <= EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listavalor1.clear();
+        }
+    :} |
+    IF_FUNC_TYPE Or:a IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ EXP <= EXP ]\n");
+         
+        if(parser.valorTipo(parser.listavalor1,a+"") ){
+            parser.listavalor1.clear();
+            
+        }else{
+            Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+            Main.error = true;      
+            parser.listavalor1.clear();
+        }
+    :} |
+
+    IF_FUNC_TYPE:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ IF_FUNC_TYPE ]\n");
+    :} |
+    error:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e015 - Condición inválida -> "); 
+        Main.error = true;  
+    :}
+;
+
+STMT_IF ::=
+    DECL:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ DECL STMT_IF ]\n"); 
+        
+
+    :}  STMT_IF |
+    ACT_PORT:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ ACT_PORT STMT_IF]\n"); 
+    :}  STMT_IF |
+    FUNC:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ FUNC STMT_IF ]\n"); 
+    :}  STMT_IF |
+    IN_OUT:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ IN_OUT STMT_IF ]\n"); 
+    :} STMT_IF |
+    IF_STMT:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ IN_OUT STMT_IF ]\n"); 
+    :} STMT_IF |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ error ; STMT_IF]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e003 - Sentencia inválida -> "); 
+        Main.error = true;  
+    :} PComa STMT_IF |
+    ERROR:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ ERROR ; STMT_IF]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e003 - Sentencia inválida -> "); 
+        Main.error = true;  
+    :} PComa STMT_IF |
+    ERROR3:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ ERROR3 ; STMT_IF]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e003 - Sentencia inválida -> "); 
+        Main.error = true;  
+    :} PComa STMT_IF |
+
+    Llave_der:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ } ]\n"); 
+    :} |
+      Llave_der:s Else COND_IF_2 {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ } ]\n"); 
+    :} |
+    Llave_der Parentesis_der PComa:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ }); ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e003 - Sentencia inválida -> "); 
+        // Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e017 - Falta llave de cierre de la sentencia If -> "); 
+        Main.error = true;   
+    :} |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> STMT_IF ::= [ error ]\n");
+        // Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e003 - Sentencia inválida -> "); 
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e017 - Falta llave de cierre de la sentencia If -> "); 
+        Main.error = true;   
+    :}
+    
+;
+
+IF_FUNC_TYPE ::=
+    
+/* --------------------------------- FUNCIONES IF DE WATCHDOG  ----------------------------------------*/
+    Micro:s Punto FUNC_TYPE_IF {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> IF_FUNC_TYPE ::= [ "+s+" Punto FUNC_TYPE_IF  ]\n"); 
+    :}  |
+
+    Camera:s Punto FUNC_TYPE_IF {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> IF_FUNC_TYPE ::= [ "+s+" Punto FUNC_TYPE_IF  ]\n"); 
+        
+    :}  |
+     IsSound Parentesis_izq Parentesis_der:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> IF_FUNC_TYPE ::= [ IsSound() ]\n"); 
+         //parser.listavalor1.add("Bool");    //agregar Tipo a la arraylist
+    /* codigo intermedio */
+    parser.resultado+="IsSound() \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+
+    parser.codAr+="analogRead(Mic)==HIGH";
+    :}|
+
+    IsMove Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE_IF ::= [ IsMove() ]\n"); 
+        //parser.listavalor1.add("Bool");    //agregar Tipo a la arraylist
+        parser.CondMove="IsMove()";
+       parser.codAr+="value == HIGH";
+:}
+;
+
+/*--------------------------------------           FOR          --------------------------------------------------*/
+FOR_STMT ::=
+    For:s COND_FOR {:
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> FOR_STMT ::= [ For ]\n");
+
+        String x="";
+          for (int i = 0; i < parser.listacond.size(); i++) {
+                  x+= i+":"+parser.listacond.get(i);
+            }
+
+        parser.label++;
+        parser.resultado+="= 0 i \n";
+        parser.resultado+="L"+parser.label+": if ";
+        parser.cond();
+        parser.label++;
+        parser.resultado+="GOTO L"+parser.label+"\n";
+        parser.resultado+="suma i 1 i \n";
+        parser.resultado+=parser.resTemp;   //lo que ejecuta si es true
+        parser.resTemp="";
+        
+        parser.resExpAr+=parser.resTempArd;   //lo que ejecuta si es true
+        parser.resTempArd="";
+        
+        parser.label--;
+        parser.resultado+="GOTO L"+parser.label+"\n";
+        parser.label++;
+        parser.resultado+="L"+parser.label+":\n\n";    
+        Main.mostrarCod.add(parser.resultado);
+        parser.resultado="";
+    :}  
+;
+
+COND_FOR ::=  
+    Parentesis_izq Int:b Identificador:s Asignacion Numero_Entero:a PComa COND {:
+    Main.listaIdValor.add(s+"");
+    Main.listaIdTipo.add(b+"");
+    Main.listaIdLinea.add((sright+1));
+    Main.listaValoresId.add(a+""); 
+
+    :}PComa Identificador:c Inc Parentesis_der COND_FOR_2 
+;
+
+COND_FOR_2 ::=
+    Llave_izq:s STMT_IF {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND_FOR_2 ::= [ { STMT_IF }  ]\n");
+    :} |
+    error:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> COND_FOR_2 ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e014 - Sintaxis errona de la Sentencia If -> "); 
+        Main.error = true;  
+    :}
+;
+
+/*--------------------------------------           WHILE                    --------------------------------------------------*/
+While_STMT ::=
+    While Parentesis_izq COND Parentesis_der COND_FOR_2{:
+     //   Main.arbolSin.add("( "+(sright+1)+" ) ---> While_STMT ::= [ While ( COND ) COND_FOR_2 ]\n");
+    :} 
+;
+
+
+
+
+/*------------------------------FUNC_TYPE PARA IF DE WATCH para Camera y micro --------------------------------------*/
+FUNC_TYPE_IF ::=
+    IsOn Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE_IF ::= [ IsOn() ]\n"); 
+        parser.listavalor1.add("Bool");    //agregar Tipo a la arraylist
+         
+    :}  |
+
+    IsMove Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE_IF ::= [ IsMove() ]\n"); 
+        parser.listavalor1.add("Bool");    //agregar Tipo a la arraylist
+        parser.codAr+="digitalRead(sensor)==HIGH";
+         
+    :}  |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> FUNC_TYPE_IF ::= [ error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e012 - Sintaxis errona en la Función -> "); 
+        Main.error = true;  
+    :} 
+;
+
+/* ------------------------------------ // ENTRADA - SALIDA  // --------------------------------------------------*/
+
+IN_OUT ::=
+   
+    Receive:s Parentesis_izq VALUE_IN Parentesis_der {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> IN_OUT ::= [ Recive VALUE PComa ]\n"); 
+    :} PComa |
+    Receive:s error {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> IN_OUT ::= [ Recive error PComa ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e013 - Sintaxis en el método Receive erronea -> "); 
+        Main.error = true;   
+    :} PComa
+;
+
+VALUE_OUT ::=
+    Identificador:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> VALUE ::= [ "+s+" ]\n"); 
+        parser.listapara.add(s+"");
+       
+
+:} |
+
+    Numero_Entero:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> VALUE ::= [ "+s+" ]\n"); 
+        parser.listapara.add(s+"");
+
+    :} |
+
+    Cadena:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> VALUE ::= [ "+s+" ]\n"); 
+        parser.listapara.add(s+"");
+
+    :} |
+
+    error:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> VALUE ::= [ error ]\n"); 
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e014 - Sintaxis erronea en el método Display -> "); 
+        Main.error = true;  
+    :}
+;
+
+VALUE_IN ::=
+    Identificador:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> VALUE ::= [ "+s+" ]\n"); 
+    :} |
+    Numero_Entero:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> VALUE ::= [ "+s+" ]\n"); 
+    :} |
+    Cadena:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> VALUE ::= [ "+s+" ]\n"); 
+    :} |
+    error:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> VALUE ::= [ error ]\n"); 
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e013 - Sintaxis erronea en el método Receive -> "); 
+        Main.error = true;  
+    :}
+;
+
+/* ------------------------------------ // FUNCIONES DE WATCH DOGS  // --------------------------------------------------*/
+
+
+FUNC ::=
+    RecordTime Parentesis_izq Numero_Entero:s Parentesis_der {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ RecordTime("+s+"); ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="RecordTime("+s+") \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+    
+   
+    :} PComa |
+    
+     Display:s VALUE_OUT  {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> IN_OUT ::= [ Display VALUE PComa ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="Display("+parser.listapara.get(0)+") \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+
+  parser.codArFuncion+="//LSD \n" +
+  " oled.clearDisplay(); \n" +     // limpia pantalla
+  " oled.setTextColor(WHITE);\n" +   // establece color al unico disponible (pantalla monocromo)
+  " oled.setCursor(0, 0);\n" +     // ubica cursor en inicio de coordenadas 0,0
+  " oled.setTextSize(2); \n" +     // establece tamano de texto en 1
+  " oled.print(\""+parser.listapara.get(0)+"\");\n" +  // escribe en pantalla el texto
+  " oled.display();\n" ;
+    parser.listapara.clear();
+
+
+    :} PComa |
+
+    Micro:s Punto FUNC_TYPE {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ "+s+" Punto FUNC_TYPE  ]\n"); 
+
+    :}  |
+
+    Camera:s Punto FUNC_TYPE {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ "+s+" Punto FUNC_TYPE  ]\n"); 
+    :}  |
+
+    Capture Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ Capture(); ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="Capture() \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+    :} PComa |
+
+    Whistle Parentesis_izq  Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ Whistle(); ]\n"); 
+    /* codigo intermedio */
+
+    parser.resTemp+="Whistle() \n";
+
+    //cod ard 
+         parser.codArFuncion+="//buzzer \n"+
+    "  tone(pBuzzer, NOTA_C4, cuarto); //un cuarto de la nota C4.\n" +
+    "  delay(cuarto*pausa); // silenciar por una duración de la nota previa + 30% de la duración de esa nota\n" +
+    "  tone(pBuzzer, NOTA_A4, octavo); //un cuarto de la nota A4.\n" +
+    "  delay(octavo*pausa); // silenciar por una duración de la nota previa + 30% de la duración de esa nota\n" +
+    "  tone(pBuzzer, NOTA_E5, cuarto); //un cuarto de la nota E5.\n" +
+    "  delay(cuarto*pausa); // silenciar por una duración de la nota previa + 30% de la duración de esa nota"+
+    "    \n";
+    :} PComa |
+
+    IsSound Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ IsSound(); ]\n"); 
+    /* codigo intermedio */
+    parser.resTemp+="IsSound() \n";
+    
+    :} PComa |
+
+    Detener Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ Detener(); ]\n"); 
+    /* codigo intermedio */
+    parser.resTemp+="Detener() \n";
+    System.out.println("Detener::"); 
+    :} PComa   |
+
+    Avanzar Parentesis_izq Numero_Entero:s Parentesis_der {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ Avanzar(FUNC_PARAMS); ]\n");
+    /* codigo intermedio */
+   
+    parser.resTemp+="Avanzar("+s+") \n";
+    //cod ARduino
+    //distancia o tiempo
+    parser.codArFuncion+="//motordc avanz\n"+
+        "for(int pos=0; pos<"+s+";pos+=1){\n" +
+        " digitalWrite(ENA, HIGH);\n" +
+        " digitalWrite(IN1, HIGH);\n" +
+        " digitalWrite(IN2, LOW);  \n" +
+        " delay(1000);}\n" +
+        "  digitalWrite(IN1, 0);\n" +
+        " digitalWrite(IN2, 0);\n" +
+        " digitalWrite(ENA, LOW);";
+    System.out.println("avanzar::"); 
+    parser.listapara.clear();
+
+
+    :} PComa |
+
+    Retroceder Parentesis_izq Numero_Entero:s Parentesis_der {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ Retroceder(FUNC_PARAMS); ]\n"); 
+    /* codigo intermedio */
+    parser.resTemp+="Retroceder("+s+") \n";
+   
+    //cod ARduino
+    //distancia y velocidad
+    parser.codArFuncion+="//motordc retro \n"+
+        "for(int pos=0; pos<"+s+";pos+=1){\n" +
+        " digitalWrite(ENA, HIGH);\n" +
+        " digitalWrite(IN1, LOW);\n" +
+        " digitalWrite(IN2, HIGH);  \n" +
+        " delay(1000);}\n" +
+        "  digitalWrite(IN1, 0);\n" +
+        " digitalWrite(IN2, 0);\n" +
+        " digitalWrite(ENA, LOW);";
+        System.out.println("Retrocedoer::"); 
+    parser.listapara.clear();
+
+:} PComa |
+
+ Move Parentesis_izq FUNC_PARAMS Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE ::= [ Move(FUNC_PARAMS); ]\n"); 
+    /* codigo intermedio */
+    parser.resTemp+="Move("+parser.listapara.get(0)+","+parser.listapara.get(1)+") \n";
+    
+    //cod ARduino
+    // grado y velocida max 50 
+        parser.codArFuncion+="//servor \n"+
+    "servo1.attach(5);\n" +
+    " servo1.write(179);"+
+    "  for(int pos=0; pos<"+parser.listapara.get(0)+";pos+=1){\n" +
+    "  servo1.write(pos);\n" +
+    "  delay(50-"+parser.listapara.get(1)+");\n" +
+    "    } \n";
+
+    parser.listapara.clear();
+    :} PComa |
+
+    Alarm Parentesis_izq Numero_Entero:s Parentesis_der{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE ::= [ Move(FUNC_PARAMS); ]\n"); 
+    /* codigo intermedio */
+    parser.resTemp+="Alarm("+s+") \n";
+    
+    //cod ARduino
+     parser.codArFuncion+="//buzzer \n"+
+    "  for(int pos=0; pos<"+s+";pos+=1){\n" +
+    "  tone(pBuzzer, NOTA_C4, cuarto); //un cuarto de la nota C4.\n" +
+    "  delay(cuarto*pausa); // silenciar por una duración de la nota previa + 30% de la duración de esa nota\n" +
+    "  tone(pBuzzer, NOTA_A4, octavo); //un cuarto de la nota A4.\n" +
+    "  delay(octavo*pausa); // silenciar por una duración de la nota previa + 30% de la duración de esa nota\n" +
+    "  tone(pBuzzer, NOTA_E5, cuarto); //un cuarto de la nota E5.\n" +
+    "  delay(cuarto*pausa); // silenciar por una duración de la nota previa + 30% de la duración de esa nota"+
+    "    } \n";
+
+    parser.listapara.clear();
+    :} PComa |
+
+
+    Punto error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC ::= [ Punto FUNC_TYPE ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e012 - Sintaxis errona en la Función -> "); 
+        Main.error = true;  
+    :}
+;
+
+FUNC_TYPE ::=
+
+/*---------------------FUNCIONES_TYPE DE WATCHDOGS--------------------------*/
+
+    IsOn Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE ::= [ IsOn(); ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="IsOn() \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+    :} PComa |
+
+    IsMove Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE ::= [ IsMove(); ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="IsMove() \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+    :} PComa |
+
+
+/*----------------------------- funciones ---------------------------------------------*/
+  
+    On Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE ::= [ On(); ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="Camera.On \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado=""; 
+    :} PComa |
+    Off Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE ::= [ off(); ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="Camera.Off \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado=""; 
+    :} PComa |
+
+    Record Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE ::= [ Record(); ]\n"); 
+    /* codigo intermedio */
+    parser.resultado+="Record() \n";
+    Main.mostrarCod.add(parser.resultado);
+    parser.resultado="";
+    :} PComa |
+    StopRec Parentesis_izq Parentesis_der:s{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_TYPE ::= [ StopRec(); ]\n"); 
+    :} PComa |
+
+   
+
+  
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> FUNC_TYPE ::= [ error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e012 - Sintaxis errona en la Función -> "); 
+        Main.error = true;  
+    :} PComa
+;
+
+FUNC_PARAMS ::=
+    Numero_Entero:s Coma Numero_Entero:b {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_PARAMS ::= [ "+s+","+b+" ]\n"); 
+
+        parser.listapara.add(s+"");
+        parser.listapara.add(b+"");
+    :} |
+    
+    Cadena:a Coma Numero_Entero:b Coma Numero_Entero:c{: 
+        Main.arbolSin.add("( "+(aright+1)+" ) ----> FUNC_PARAMS ::= [ "+a+", "+b+", "+c+" ]\n"); 
+        parser.listapara.add(a+"");
+        parser.listapara.add(b+"");
+        parser.listapara.add(c+"");
+    :} |
+
+    Cadena:s Coma THIS_FUNC {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> FUNC_PARAMS ::= [ "+s+", THIS_FUNC ]\n"); 
+    :} |
+    Cadena:a Coma THIS_FUNC Coma Cadena:b{: 
+        Main.arbolSin.add("( "+(aright+1)+" ) ----> FUNC_PARAMS ::= [ "+a+", THIS_FUNC, "+b+" ]\n"); 
+    :} |
+    error:s{:
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> FUNC_TYPE ::= [ error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e011 - Sintaxis erronea en la función Program -> "); 
+        Main.error = true;  
+    :} 
+;
+
+THIS_FUNC ::=
+    This:s Punto THIS_FUNC_TYPE {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> THIS_FUNC ::= [ This Punto FUNC_TYPE ]\n"); 
+    :}
+;
+
+THIS_FUNC_TYPE ::=
+    GetTemp Parentesis_izq Parentesis_der:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> THIS_FUNC_TYPE ::= [ GetTemp() ]\n"); 
+    :} 
+;
+
+/* ------------------------------------ // ACTIVACIÓN DE PUERTO // --------------------------------------------------*/
+
+ACT_PORT ::=
+  
+    PortD error:s PComa{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> ACT_PORT ::= [ PortD => error PComa ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e010 - Sintaxis de activación de puertos erronea - > "); 
+        Main.error = true;   
+    :}
+;
+
+ENA_PORT ::=
+    Enable Parentesis_izq Parentesis_der:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ------> ENA_PORT ::= [ Enable() ]\n"); 
+    :} |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ------> ENA_PORT ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e010 - Sintaxis de activación de puertos erronea - > "); 
+        Main.error = true;  
+    :}
+;
+
+
+/* ------------------------------------ // DECLARACIONES // ------------------------------------------------------------*/
+
+DECL ::=
+/*------------------------------ SUMA o SOLO ASIGNACION ---------------------------------*/
+/*------------------------------- Int  ---------------------------------*/
+ Identificador:s Asignacion VALOR:a PComa{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> EXP ::= [ "+s+" = "+a+" PComa ]\n");   
+        parser.listavalor1.add(Main.returntipo(s+""));  //agregar Tipo a la arraylist
+            if(Main.buscarid(s+"")  ){ //id declarada??
+                if(parser.valorTipo(parser.listavalor1,"") ){ //tipos compatibles??
+                
+                    parser.listavalor1.clear();
+                }else{
+                    Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e020 - Tipos incompatibles se espera Numeros "); 
+                    Main.error = true;   
+                    parser.listavalor1.clear();
+                }
+                 }else{
+                 Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e019 - Variable "+s+" no declarada  en: " ); 
+                 Main.error = true; 
+                 parser.listavalor1.clear();
+               
+        }
+:}   | 
+ 
+      Identificador:s Asignacion EXP PComa{: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> EXP ::= [ "+s+" = EXP PComa ]\n");
+        parser.listavalor1.add(Main.returntipo(s+""));  //agregar Tipo a la arraylist
+            if(Main.buscarid(s+"")  ){
+                if(parser.valorTipo(parser.listavalor1,"") ){ //tipos compatibles??
+                    parser.listapila.add("@"+s);
+                    
+                    parser.pos(); //generar codInt de expre
+                    
+
+                    parser.listavalor1.clear();
+                    parser.listapila.clear();
+                }else{
+                    Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e020 - Tipos incompatibles  "); 
+                    Main.error = true;   
+                    parser.listavalor1.clear();
+                }
+                 }else{
+                 Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e019 - Variable "+s+" no declarada  en: " ); 
+                 Main.error = true; 
+                 parser.listavalor1.clear();
+        }
+:}  
+;
+
+/*valoresde*/
+/*
+VALOR ::=
+    Numero_Entero:s {:
+    parser.listavalor1.add("Int");    //agregar Tipo a la arraylist
+      
+    :} |
+    Cadena:s {: 
+      Main.arbolSin.add("( "+(sright+1)+" ) ----> TIPO ::= [  Text ]\n");
+      parser.listavalor1.add("Text");  //agregar Tipo a la arraylist
+     
+    :} |
+    Numero_Flotante:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> TIPO ::= [  Float ]\n");
+        parser.listavalor1.add("Float");  //agregar Tipo a la arraylist
+       
+    :} |
+    True:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> TIPO ::= [  Bool ]\n");
+        parser.listavalor1.add("Bool");  //agregar Tipo a la arraylist
+   
+    :} 
+        |
+    False:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> TIPO ::= [  Bool ]\n");
+        parser.listavalor1.add("Bool");  //agregar Tipo a la arraylist
+        
+    :} 
+;
+*/
+
+DECL_TIPO ::=
+    EXP_LIST:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> DECL_TIPO ::= [ EXP_LIST ]\n"); 
+    :} |
+    DEC_OBJETO:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> DECL_TIPO ::= [ DEC_OBJETO ]\n"); 
+    :} |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> DECL_TIPO ::= [ error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e009 - Sintaxis de declaración erronea -> "); 
+        Main.error = true;  
+    :} PComa
+;
+
+
+/* ------------------------------------ // EXPRESIONES // --------------------------------------------------*/
+
+EXP_LIST ::=
+    EXP:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> EXP_LIST ::= [ EXP PComa ]\n");
+    :} PComa
+;
+
+EXP ::= 
+             EXP Suma:a{:Main.ArbolConPilas.add("+");:} EXP:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP + EXP ]\n"); 
+                parser.listapila.add(a+"");
+                if(parser.valorTipo(parser.listavalor1,a+"") ){
+                    
+                }else{
+                    Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+                    Main.error = true;     
+                    parser.listavalor1.clear();
+                }
+            :} | 
+            EXP Resta:a{:Main.ArbolConPilas.add("-");:} EXP:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP - EXP ]\n");
+                parser.listapila.add(a+"");
+                if(parser.valorTipo(parser.listavalor1,a+"") ){
+                    
+                }else{
+                    Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+                    Main.error = true;      
+                    parser.listavalor1.clear();
+                }
+            :} | 
+            EXP Multiplicacion:a{:Main.ArbolConPilas.add("*");:} EXP:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP * EXP ]\n");
+                parser.listapila.add(a+"");
+                if(parser.valorTipo(parser.listavalor1,a+"") ){
+
+                }else{
+                    Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+                    Main.error = true;     
+                    parser.listavalor1.clear();
+                }
+            :} | 
+            EXP Division:a{:Main.ArbolConPilas.add("/");:} EXP:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP / EXP ]\n"); 
+                parser.listapila.add(a+"");
+                if(parser.valorTipo(parser.listavalor1,a+"") ){
+
+                }else{
+                    Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error semantico - e021 - Tipos incompatibles para el operador '"+a+"': "); 
+                    Main.error = true;     
+                    parser.listavalor1.clear();
+                }
+            :} | 
+            Parentesis_izq EXP Parentesis_der:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ ( EXP ) ]\n"); 
+                
+            :}  |
+            Numero_Entero:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ "+s+" ]\n");
+                parser.listacond.add(s+"");
+                parser.listapila.add(s+"");
+                parser.listavalor1.add("Int");    //agregar Tipo a la arraylist
+                Main.ArbolConPilas.add(s);
+            :} |
+            Numero_Flotante:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ "+s+" ]\n");
+                parser.listacond.add(s+"");
+                parser.listapila.add(s+"");
+                parser.listavalor1.add("Float");
+Main.ArbolConPilas.add(s);
+ 
+            :} |
+         
+            Cadena:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ "+s+" ]\n");
+                parser.listavalor1.add("Text"); 
+Main.ArbolConPilas.add(s);
+                 
+            :} |
+            Identificador:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ "+s+" ]\n");
+                parser.listacond.add(s+"");
+                parser.listapila.add(s+"");
+                parser.listavalor1.add(Main.returntipo(s+""));  //agregar Tipo a la arraylist
+Main.ArbolConPilas.add(s);
+            :} |
+            True:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ True ]\n");
+                parser.listavalor1.add("Bool");    //agregar Tipo a la arraylist
+Main.ArbolConPilas.add(s);
+             //    
+            :} |
+            False:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ False ]\n");
+                parser.listavalor1.add("Bool");    //agregar Tipo a la arraylist
+Main.ArbolConPilas.add(s);
+             //    
+            :} |
+
+            /* Errores */
+
+            EXP Suma error:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP + error ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;    
+            :} | 
+            EXP Resta error:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP - error ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;    
+            :} | 
+            EXP Multiplicacion error:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP * error ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;    
+            :} | 
+            EXP Division error:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP / error ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;    
+            :}  |/*
+            error:s Suma EXP {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ error + EXP ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;   
+            :} | 
+            error:s Resta EXP {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ error - EXP ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;    
+            :} | 
+            error:s Multiplicacion EXP {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ error * EXP ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;    
+            :} | 
+            error:s Division EXP {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ error / EXP ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;    
+            :} |*/ 
+            Parentesis_izq EXP error:s Parentesis_der {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ ( EXP error ) ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;     
+            :} | 
+            Parentesis_izq error:s EXP Parentesis_der {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ ( error EXP ) ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;     
+            :} | 
+            Parentesis_izq error:s Parentesis_der {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ EXP ( error ) ]\n");
+                Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e007 - Expresión inválida -> "); 
+                Main.error = true;     
+            :}
+;
+
+EXP_2 ::=
+     /*------------------------- valores ----------------*/
+            Numero_Entero:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ "+s+" ]\n");
+            :} |
+            Numero_Flotante:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ "+s+" ]\n");
+            :} |
+            Cadena:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ "+s+" ]\n");
+            :} |
+            Identificador:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ "+s+" ]\n");
+            :} |
+            True:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ True ]\n");
+            :} |
+            False:s {: 
+                Main.arbolSin.add("( "+(sright+1)+" ) ------> EXP ::= [ False ]\n");
+            :} 
+;
+
+
+/* ------------------------------------ // INSTANCIACIÓN // --------------------------------------------------*/
+
+DEC_OBJETO ::=
+    New:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DEC_OBJETO ::= [ New OBJETO ; ]\n"); 
+    :} OBJETO PComa |
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> DEC_OBJETO ::= [ New error ; ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e008 - Sintaxis de declaración de dispositivo erronea -> "); 
+        Main.error = true;   
+    :} OBJETO PComa
+;
+
+OBJETO ::=
+    Temp:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> OBJETO ::= [ Temp( OBJ_PARAMETROS ) ]\n"); 
+    :} Parentesis_izq OBJ_PARAMETROS Parentesis_der |
+  
+
+
+    /* Errores */
+
+    SmartCamera:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> OBJETO ::= [ SmartCamera error ]\n"); 
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e008 - Sintaxis de declaración de dispositivo erronea -> "); 
+        Main.error = true;  
+    :} error | 
+    error:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ---> OBJETO ::= [ error ]\n");
+        Main.listaErroresSin.add("> Linea ( "+ (sright+1) +" ) - Error sintáctico - e008 - Sintaxis de declaración de dispositivo erronea -> "); 
+        Main.error = true;  
+    :}
+;
+
+OBJ_PARAMETROS ::=
+    PortA Parentesis_izq Numero_Entero:s {: 
+        Main.arbolSin.add("( "+(sright+1)+" ) ----> OBJ_PARAMETROS ::= [ PortA ( "+s+" ) ]\n"); 
+    :} Parentesis_der 
+  
+;
+
+
+            
+  

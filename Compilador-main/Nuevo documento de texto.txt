@@ -1,0 +1,19 @@
+#include <Servo.h>\n" +
+"\n" +
+"Servo servo1;\n" +
+"\n" +
+"int PINSERVO = 2;\n" +
+"int PULSOMIN = 1000;\n" +
+"int PULSOMAX = 2000;\n" +
+"\n" +
+"\n" +
+"void setup() {\n" +
+"   servo1.attach(PINSERVO,PULSOMIN,PULSOMAX);\n" +
+"\n" +
+"}\n" +
+"\n" +
+"void loop() {\n" +
+"  servo1.write(0);\n" +
+"  delay(500);\n" +
+"  servo1.write(180);\n" +
+"  delay(500);\n }

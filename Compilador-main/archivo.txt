@@ -1,0 +1,16 @@
+mi_camara.Initialize(Camera{  
+ 
+ Display 'Hola';
+
+ If(IsMove()){
+ Avanzar(3);
+ Whistle();
+ Move(100,40);	
+ Retroceder(3);	
+ Display 'Intruso';
+
+}
+ Display 'Hola';
+
+
+});

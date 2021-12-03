@@ -1,0 +1,35 @@
+mi_camara.Initialize(Camera{  
+
+ Import paquete1.clase;
+ Import paquete2.tool;
+
+ Text txt;
+ Int grado ; 
+ Int temperatura ;
+ Int int2 = 0; 
+ Float real = 2.0;
+ Bool boo = False; 
+
+ Camera.On();
+ If(4+2-3+4!=5-6+5){
+	}
+ If(4+2==3+4){
+	}
+ For (Int i = 0; i < 12; i++){	
+		Avanzar(10,5);
+	}
+	Move(4,5);
+	If(i>7){
+	grado = 50;
+	Retroceder(10,5);
+
+	}
+	temperatura = grado +50;
+	Detener();
+	RecordTime(15);
+	 Display 'Camera encedida';
+	 Display temperatura;
+	Camera.Off();
+	 	
+
+});
